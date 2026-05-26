@@ -698,9 +698,29 @@ def _complexity_class(value: int) -> str:
     return "lv-lo"
 
 
+def _display_root(root: Path) -> str:
+    """ヒーローに表示する解析対象名。絶対パスは出さず、入力したディレクトリ名のみ。"""
+    if root.is_file():
+        return root.name
+    name = root.name
+    return name if name else str(root.resolve().name) or "."
+
+
+def _display_source(source_path: str, root: Path) -> str:
+    """個別プログラムのソースパス表示。root 配下なら相対、外なら basename のみ。"""
+    src = Path(source_path)
+    root_full = root.resolve()
+    try:
+        rel = src.resolve().relative_to(root_full if root_full.is_dir() else root_full.parent)
+        return rel.as_posix()
+    except ValueError:
+        return src.name
+
+
 def render_html(project: CobolProject) -> str:
     summary = project.summary()
     generated_at = datetime.now().isoformat(timespec="seconds")
+    display_root = _display_root(project.root)
     parts: List[str] = []
     parts.append("<!doctype html><html lang='ja'><head><meta charset='utf-8'>")
     parts.append("<meta name='viewport' content='width=device-width,initial-scale=1'>")
@@ -719,7 +739,7 @@ def render_html(project: CobolProject) -> str:
     parts.append("<h1 class='hero-title'>静的解析レポート</h1>")
     parts.append(
         f"<p class='hero-meta'>"
-        f"<span>解析対象: <code>{_h(project.root)}</code></span>"
+        f"<span>解析対象: <code>{_h(display_root)}</code></span>"
         f"<span class='dot'>·</span>"
         f"<span>生成: {_h(generated_at)}</span>"
         f"</p>"
@@ -764,7 +784,7 @@ def render_html(project: CobolProject) -> str:
     # Main
     parts.append("<main class='main'>")
     for program in project.programs:
-        parts.append(_render_program(program))
+        parts.append(_render_program(program, project.root))
     parts.append("</main>")
     parts.append("</div>")
 
@@ -775,7 +795,7 @@ def render_html(project: CobolProject) -> str:
     return "\n".join(parts)
 
 
-def _render_program(p: Program) -> str:
+def _render_program(p: Program, root: Path) -> str:
     chunks: List[str] = []
     chunks.append(f"<article class='program' id='prog-{_h(p.program_id)}'>")
 
@@ -783,7 +803,7 @@ def _render_program(p: Program) -> str:
     chunks.append("<header class='prog-head'>")
     chunks.append(f"<h2 class='prog-title'>{_h(p.program_id)}</h2>")
     chunks.append("<div class='prog-meta'>")
-    chunks.append(f"<span class='chip chip-mono'>{_h(p.source_path)}</span>")
+    chunks.append(f"<span class='chip chip-mono'>{_h(_display_source(p.source_path, root))}</span>")
     chunks.append(f"<span class='chip chip-enc'>{_h(p.encoding)}</span>")
     if p.dead_paragraphs:
         chunks.append(f"<span class='chip chip-warn'>dead × {len(p.dead_paragraphs)}</span>")
