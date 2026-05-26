@@ -13,6 +13,9 @@ analysis_report*.html
 analysis*.json
 report*.html
 
+# Vercel
+.vercel/
+
 # OS / Editors
 .DS_Store
 Thumbs.db

@@ -1,0 +1,7 @@
+.ai_cache/
+analysis_report*.html
+analysis*.json
+__pycache__/
+*.pyc
+.env
+.env.local

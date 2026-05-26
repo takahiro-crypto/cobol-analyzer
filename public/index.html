@@ -1,0 +1,554 @@
+<!doctype html><html lang='ja'><head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>COBOL Analyzer Report</title>
+<style>
+
+*, *::before, *::after { box-sizing: border-box; }
+:root {
+  color-scheme: light;
+  --bg: #f6f8fb;
+  --fg: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --card: #ffffff;
+  --primary: #2563eb;
+  --primary-soft: #dbeafe;
+  --accent: #0ea5e9;
+  --hero-from: #0f172a;
+  --hero-to: #1e3a8a;
+  --warn: #ef4444;
+  --warn-soft: #fee2e2;
+  --ok: #10b981;
+  --shadow: 0 1px 2px rgba(15,23,42,.04), 0 4px 12px rgba(15,23,42,.06);
+  --radius: 12px;
+}
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Yu Gothic UI",
+               "Hiragino Sans", "Noto Sans JP", sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+
+/* Hero */
+.hero {
+  background: linear-gradient(135deg, var(--hero-from), var(--hero-to));
+  color: #fff;
+  padding: 3.5rem 1.5rem 4.5rem;
+}
+.hero-inner { max-width: 1180px; margin: 0 auto; }
+.brand { display: flex; align-items: center; gap: .6rem; opacity: .85;
+         font-size: .85rem; letter-spacing: .1em; text-transform: uppercase; }
+.brand-mark {
+  width: 10px; height: 10px; border-radius: 999px;
+  background: linear-gradient(135deg, #38bdf8, #818cf8);
+  box-shadow: 0 0 12px rgba(56,189,248,.7);
+}
+.brand-name { font-weight: 600; }
+.hero-title {
+  font-size: clamp(1.8rem, 3.2vw, 2.6rem);
+  margin: .8rem 0 .6rem; letter-spacing: -0.02em;
+}
+.hero-meta { display: flex; flex-wrap: wrap; gap: .6rem .9rem;
+             color: rgba(255,255,255,.78); margin: 0; font-size: .92rem; }
+.hero-meta .dot { opacity: .5; }
+.hero-meta code { background: rgba(255,255,255,.12); padding: .1em .45em;
+                  border-radius: 5px; color: #e0e7ff; }
+
+/* KPI row */
+.kpi-row {
+  max-width: 1180px; margin: -2.5rem auto 0; padding: 0 1.5rem;
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem;
+  position: relative; z-index: 1;
+}
+.kpi {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.1rem 1.2rem;
+  box-shadow: var(--shadow);
+}
+.kpi-value { font-size: 1.8rem; font-weight: 600; letter-spacing: -0.02em; }
+.kpi-label { color: var(--muted); font-size: .82rem; margin-top: .2rem;
+             letter-spacing: .05em; }
+.kpi.kpi-warn .kpi-value { color: var(--warn); }
+
+/* Layout */
+.layout {
+  max-width: 1180px; margin: 2rem auto 0; padding: 0 1.5rem 3rem;
+  display: grid; grid-template-columns: 240px 1fr; gap: 2rem;
+}
+@media (max-width: 900px) {
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: static !important; }
+}
+
+/* Sidebar */
+.sidebar { position: sticky; top: 1.5rem; align-self: start;
+           max-height: calc(100vh - 3rem); overflow-y: auto; }
+.side-title { font-size: .75rem; letter-spacing: .12em; text-transform: uppercase;
+              color: var(--muted); margin: 0 .6rem .5rem; font-weight: 600; }
+.side-nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-link {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: .6rem .8rem; border-radius: 8px;
+  color: var(--fg); position: relative;
+  transition: background .15s;
+}
+.nav-link:hover { background: var(--primary-soft); text-decoration: none; }
+.nav-name { font-weight: 600; font-size: .95rem; }
+.nav-meta { color: var(--muted); font-size: .78rem; }
+.nav-dot {
+  position: absolute; top: .9rem; right: .8rem;
+  width: 7px; height: 7px; border-radius: 999px; background: var(--warn);
+}
+
+/* Main / program */
+.main { display: flex; flex-direction: column; gap: 2rem; }
+.program {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.8rem;
+  box-shadow: var(--shadow); scroll-margin-top: 1.5rem;
+}
+.prog-head { display: flex; flex-wrap: wrap; align-items: center;
+             justify-content: space-between; gap: .8rem; margin-bottom: 1.2rem; }
+.prog-title { font-size: 1.5rem; letter-spacing: -0.02em; }
+.prog-meta { display: flex; flex-wrap: wrap; gap: .4rem; }
+
+/* Chips & badges */
+.chip {
+  display: inline-flex; align-items: center;
+  background: #f1f5f9; color: #334155;
+  border-radius: 999px; padding: .2rem .7rem;
+  font-size: .8rem; font-weight: 500;
+}
+.chip-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+             font-size: .76rem; background: #eef2f7; }
+.chip-enc { background: #ecfeff; color: #155e75; }
+.chip-warn { background: var(--warn-soft); color: #991b1b; }
+.chip-copy { background: #f3e8ff; color: #6b21a8; font-family: ui-monospace, monospace; }
+.chip-sub { color: var(--muted); margin-left: .3rem; font-size: .72rem; }
+.chip-list { display: flex; flex-wrap: wrap; gap: .4rem; }
+
+.badge {
+  display: inline-flex; align-items: center;
+  padding: .15rem .55rem; border-radius: 6px;
+  font-size: .72rem; font-weight: 600; letter-spacing: .02em;
+  background: #f1f5f9; color: #334155;
+}
+.badge-dead { background: var(--warn-soft); color: #991b1b; }
+.badge-cplx.lv-lo { background: #d1fae5; color: #065f46; }
+.badge-cplx.lv-md { background: #fef3c7; color: #92400e; }
+.badge-cplx.lv-hi { background: #fee2e2; color: #991b1b; }
+.call-static { background: #dbeafe; color: #1e40af; }
+.call-dynamic { background: #fef3c7; color: #92400e; }
+
+.op-read   { background: #dbeafe; color: #1e40af; }
+.op-create { background: #d1fae5; color: #065f46; }
+.op-update { background: #fef3c7; color: #92400e; }
+.op-delete { background: #fee2e2; color: #991b1b; }
+.op-append { background: #ede9fe; color: #5b21b6; }
+.op-rw     { background: #cffafe; color: #155e75; }
+.op-other  { background: #e2e8f0; color: #475569; }
+
+/* AI callout */
+.callout {
+  background: linear-gradient(180deg, #eef2ff, #fff);
+  border: 1px solid #c7d2fe; border-left: 4px solid #6366f1;
+  border-radius: 8px; padding: 1rem 1.2rem; margin-bottom: 1.4rem;
+}
+.callout-label {
+  font-size: .72rem; letter-spacing: .1em; text-transform: uppercase;
+  color: #4338ca; font-weight: 700; margin-bottom: .3rem;
+}
+.callout-body { margin: 0; white-space: pre-wrap; }
+
+/* Metrics chips */
+.metrics {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: .8rem; margin-bottom: 1.6rem;
+}
+.metric {
+  background: #f8fafc; border: 1px solid var(--border);
+  border-radius: 10px; padding: .7rem .9rem;
+}
+.metric-value { font-size: 1.35rem; font-weight: 600; letter-spacing: -0.01em; }
+.metric-label { color: var(--muted); font-size: .76rem; margin-top: .15rem; }
+
+/* Blocks */
+.block { margin-top: 1.6rem; }
+.block-title {
+  font-size: 1rem; margin-bottom: .8rem;
+  display: flex; align-items: center; gap: .5rem;
+}
+.block-count {
+  background: #f1f5f9; color: var(--muted);
+  border-radius: 999px; padding: .05rem .55rem;
+  font-size: .75rem; font-weight: 500;
+}
+.block.alert .block-title { color: #991b1b; }
+
+/* File cards */
+.file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .8rem; }
+.file-card {
+  background: #f8fafc; border: 1px solid var(--border);
+  border-radius: 10px; padding: .9rem 1rem;
+}
+.file-name { font-weight: 600; font-family: ui-monospace, monospace; }
+.file-meta { display: grid; grid-template-columns: auto 1fr;
+             column-gap: .8rem; row-gap: .2rem;
+             margin: .5rem 0 0; font-size: .8rem; }
+.file-meta dt { color: var(--muted); }
+.file-meta dd { margin: 0; font-family: ui-monospace, monospace; }
+
+/* Paragraph cards */
+.para-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: .8rem;
+}
+.para-card {
+  background: #f8fafc; border: 1px solid var(--border);
+  border-radius: 10px; padding: .9rem 1rem;
+  display: flex; flex-direction: column; gap: .5rem;
+}
+.para-card.para-dead {
+  background: linear-gradient(180deg, #fff1f2, #fff);
+  border-color: #fecaca;
+}
+.para-head { display: flex; justify-content: space-between;
+             align-items: flex-start; gap: .5rem; }
+.para-name { font-weight: 600; font-family: ui-monospace, monospace; word-break: break-all; }
+.para-badges { display: flex; flex-wrap: wrap; gap: .3rem; flex-shrink: 0; }
+.para-meta { display: flex; flex-wrap: wrap; gap: .4rem .8rem;
+             color: var(--muted); font-size: .78rem; }
+.para-refs { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; }
+.para-refs-label { color: var(--muted); font-size: .75rem; }
+.ref-chip {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: 6px; padding: .1rem .45rem;
+  font-size: .73rem; font-family: ui-monospace, monospace;
+}
+.para-desc { margin: .2rem 0 0; font-size: .9rem; color: #334155; white-space: pre-wrap; }
+
+/* Flow list (CALL) */
+.flow-list { list-style: none; padding: 0; margin: 0;
+             display: flex; flex-direction: column; gap: .4rem; }
+.flow-item {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
+  padding: .55rem .85rem; background: #f8fafc;
+  border: 1px solid var(--border); border-radius: 8px;
+  font-size: .88rem;
+}
+.flow-line { color: var(--muted); font-family: ui-monospace, monospace; font-size: .78rem; }
+.flow-node { font-family: ui-monospace, monospace; font-weight: 500; }
+.flow-target { color: var(--primary); }
+.flow-arrow { color: var(--muted); }
+
+/* CRUD */
+.crud-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: .8rem;
+}
+.crud-card {
+  background: #f8fafc; border: 1px solid var(--border);
+  border-radius: 10px; padding: .9rem 1rem;
+  display: flex; flex-direction: column; gap: .55rem;
+}
+.crud-head { display: flex; flex-direction: column; gap: .15rem; }
+.crud-kind { color: var(--muted); font-size: .75rem; letter-spacing: .04em; }
+.crud-target { font-weight: 600; font-family: ui-monospace, monospace; word-break: break-all; }
+.crud-ops { display: flex; flex-wrap: wrap; gap: .3rem; }
+.crud-occurrences { list-style: none; padding: 0; margin: 0;
+                    display: flex; flex-direction: column; gap: .2rem; }
+.crud-occurrences li { display: flex; gap: .6rem; font-size: .78rem; }
+.occ-line { color: var(--muted); font-family: ui-monospace, monospace; min-width: 3rem; }
+.occ-para { font-family: ui-monospace, monospace; flex: 1; }
+.occ-op { color: var(--muted); }
+
+/* Warnings */
+.warn-list { list-style: none; padding: 0; margin: 0;
+             display: flex; flex-direction: column; gap: .35rem; }
+.warn-list li {
+  background: var(--warn-soft); color: #7f1d1d;
+  border-radius: 6px; padding: .5rem .8rem; font-size: .85rem;
+}
+
+/* Footer */
+.site-footer { text-align: center; color: var(--muted); font-size: .82rem;
+               padding: 2rem 1rem 3rem; }
+.site-footer a { color: var(--muted); border-bottom: 1px dotted var(--muted); }
+
+</style></head><body>
+<header class='hero'>
+<div class='hero-inner'>
+<div class='brand'>
+<span class='brand-mark'></span>
+<span class='brand-name'>COBOL Analyzer</span>
+</div>
+<h1 class='hero-title'>静的解析レポート</h1>
+<p class='hero-meta'><span>解析対象: <code>C:\Users\sugaw\claude-projects\gloling-cobol\sample_cobol</code></span><span class='dot'>·</span><span>生成: 2026-05-26T11:43:58</span></p>
+</div></header>
+<div class='kpi-row'>
+<div class='kpi '><div class='kpi-value'>2</div><div class='kpi-label'>プログラム</div></div>
+<div class='kpi '><div class='kpi-value'>112</div><div class='kpi-label'>総行数</div></div>
+<div class='kpi '><div class='kpi-value'>89</div><div class='kpi-label'>コード行数</div></div>
+<div class='kpi '><div class='kpi-value'>9</div><div class='kpi-label'>段落</div></div>
+<div class='kpi kpi-warn'><div class='kpi-value'>1</div><div class='kpi-label'>デッドコード</div></div>
+</div>
+<div class='layout'>
+<aside class='sidebar'>
+<div class='side-title'>プログラム</div>
+<nav class='side-nav'>
+<a href='#prog-ACCTDEFS' class='nav-link'><span class='nav-name'>ACCTDEFS</span><span class='nav-meta'>0 段落 · 4 行</span></a>
+<a href='#prog-INTBATCH' class='nav-link'><span class='nav-name'>INTBATCH</span><span class='nav-meta'>9 段落 · 85 行</span><span class='nav-dot'></span></a>
+</nav></aside>
+<main class='main'>
+<article class='program' id='prog-ACCTDEFS'>
+<header class='prog-head'>
+<h2 class='prog-title'>ACCTDEFS</h2>
+<div class='prog-meta'>
+<span class='chip chip-mono'>C:\Users\sugaw\claude-projects\gloling-cobol\sample_cobol\ACCTDEFS.cpy</span>
+<span class='chip chip-enc'>utf-8</span>
+</div></header>
+<section class='metrics'>
+<div class='metric'><div class='metric-value'>8</div><div class='metric-label'>総行数</div></div>
+<div class='metric'><div class='metric-value'>4</div><div class='metric-label'>コード</div></div>
+<div class='metric'><div class='metric-value'>4</div><div class='metric-label'>コメント</div></div>
+<div class='metric'><div class='metric-value'>0</div><div class='metric-label'>空行</div></div>
+<div class='metric'><div class='metric-value'>0</div><div class='metric-label'>段落</div></div>
+<div class='metric'><div class='metric-value'>1</div><div class='metric-label'>複雑度</div></div>
+</section>
+</article>
+<article class='program' id='prog-INTBATCH'>
+<header class='prog-head'>
+<h2 class='prog-title'>INTBATCH</h2>
+<div class='prog-meta'>
+<span class='chip chip-mono'>C:\Users\sugaw\claude-projects\gloling-cobol\sample_cobol\INTBATCH.cob</span>
+<span class='chip chip-enc'>utf-8</span>
+<span class='chip chip-warn'>dead × 1</span>
+</div></header>
+<section class='metrics'>
+<div class='metric'><div class='metric-value'>104</div><div class='metric-label'>総行数</div></div>
+<div class='metric'><div class='metric-value'>85</div><div class='metric-label'>コード</div></div>
+<div class='metric'><div class='metric-value'>19</div><div class='metric-label'>コメント</div></div>
+<div class='metric'><div class='metric-value'>0</div><div class='metric-label'>空行</div></div>
+<div class='metric'><div class='metric-value'>9</div><div class='metric-label'>段落</div></div>
+<div class='metric'><div class='metric-value'>20</div><div class='metric-label'>複雑度</div></div>
+</section>
+<section class='block'>
+<h3 class='block-title'>ファイル宣言</h3>
+<div class='file-grid'>
+<div class='file-card'>
+<div class='file-name'>ACCTMAST</div>
+<dl class='file-meta'>
+<dt>ASSIGN</dt><dd>ACCT.DAT</dd>
+<dt>ORG</dt><dd>SEQUENTIAL</dd>
+</dl></div>
+<div class='file-card'>
+<div class='file-name'>INTDETL</div>
+<dl class='file-meta'>
+<dt>ASSIGN</dt><dd>INT.DAT</dd>
+<dt>ORG</dt><dd>SEQUENTIAL</dd>
+</dl></div>
+</div></section>
+<section class='block'>
+<h3 class='block-title'>段落・セクション <span class='block-count'>9</span></h3>
+<div class='para-grid'>
+<div class='para-card'>
+<div class='para-head'>
+<div class='para-name'>MAIN-RTN</div>
+<div class='para-badges'>
+<span class='badge badge-cplx lv-md'>cplx 5</span>
+</div></div>
+<div class='para-meta'>
+<span>L40–49</span>
+<span>文 8</span>
+</div>
+</div>
+<div class='para-card'>
+<div class='para-head'>
+<div class='para-name'>INIT-RTN</div>
+<div class='para-badges'>
+<span class='badge badge-cplx lv-lo'>cplx 1</span>
+</div></div>
+<div class='para-meta'>
+<span>L50–54</span>
+<span>文 3</span>
+</div>
+<div class='para-refs'>
+<span class='para-refs-label'>呼出元</span>
+<span class='ref-chip'>MAIN-RTN</span>
+</div>
+</div>
+<div class='para-card'>
+<div class='para-head'>
+<div class='para-name'>READ-LOOP</div>
+<div class='para-badges'>
+<span class='badge badge-cplx lv-lo'>cplx 2</span>
+</div></div>
+<div class='para-meta'>
+<span>L55–60</span>
+<span>文 4</span>
+</div>
+<div class='para-refs'>
+<span class='para-refs-label'>呼出元</span>
+<span class='ref-chip'>MAIN-RTN</span>
+</div>
+</div>
+<div class='para-card'>
+<div class='para-head'>
+<div class='para-name'>CALC-INTEREST</div>
+<div class='para-badges'>
+<span class='badge badge-cplx lv-md'>cplx 7</span>
+</div></div>
+<div class='para-meta'>
+<span>L61–79</span>
+<span>文 17</span>
+</div>
+<div class='para-refs'>
+<span class='para-refs-label'>呼出元</span>
+<span class='ref-chip'>READ-LOOP</span>
+</div>
+</div>
+<div class='para-card'>
+<div class='para-head'>
+<div class='para-name'>HIGH-INTEREST-WARN</div>
+<div class='para-badges'>
+<span class='badge badge-cplx lv-lo'>cplx 1</span>
+</div></div>
+<div class='para-meta'>
+<span>L80–82</span>
+<span>文 1</span>
+</div>
+<div class='para-refs'>
+<span class='para-refs-label'>呼出元</span>
+<span class='ref-chip'>CALC-INTEREST</span>
+</div>
+</div>
+<div class='para-card'>
+<div class='para-head'>
+<div class='para-name'>POST-LEDGER</div>
+<div class='para-badges'>
+<span class='badge badge-cplx lv-lo'>cplx 1</span>
+</div></div>
+<div class='para-meta'>
+<span>L83–94</span>
+<span>文 0</span>
+</div>
+<div class='para-refs'>
+<span class='para-refs-label'>呼出元</span>
+<span class='ref-chip'>MAIN-RTN</span>
+</div>
+</div>
+<div class='para-card'>
+<div class='para-head'>
+<div class='para-name'>CLOSE-RTN</div>
+<div class='para-badges'>
+<span class='badge badge-cplx lv-lo'>cplx 1</span>
+</div></div>
+<div class='para-meta'>
+<span>L95–98</span>
+<span>文 1</span>
+</div>
+<div class='para-refs'>
+<span class='para-refs-label'>呼出元</span>
+<span class='ref-chip'>MAIN-RTN</span>
+</div>
+</div>
+<div class='para-card para-dead'>
+<div class='para-head'>
+<div class='para-name'>LEGACY-CONVERSION</div>
+<div class='para-badges'>
+<span class='badge badge-dead'>dead</span>
+<span class='badge badge-cplx lv-lo'>cplx 1</span>
+</div></div>
+<div class='para-meta'>
+<span>L99–102</span>
+<span>文 2</span>
+</div>
+</div>
+<div class='para-card'>
+<div class='para-head'>
+<div class='para-name'>LEGACY-EXIT</div>
+<div class='para-badges'>
+<span class='badge badge-cplx lv-lo'>cplx 1</span>
+</div></div>
+<div class='para-meta'>
+<span>L103–104</span>
+<span>文 1</span>
+</div>
+<div class='para-refs'>
+<span class='para-refs-label'>呼出元</span>
+<span class='ref-chip'>LEGACY-CONVERSION</span>
+</div>
+</div>
+</div></section>
+<section class='block'>
+<h3 class='block-title'>CALL <span class='block-count'>2</span></h3>
+<ul class='flow-list'>
+<li class='flow-item'><span class='flow-line'>L45</span><span class='flow-node'>MAIN-RTN</span><span class='flow-arrow'>→</span><span class='flow-node flow-target'>AUDITLOG</span><span class='badge call-static'>静的</span></li>
+<li class='flow-item'><span class='flow-line'>L47</span><span class='flow-node'>MAIN-RTN</span><span class='flow-arrow'>→</span><span class='flow-node flow-target'>WS-NEXT-PGM</span><span class='badge call-dynamic'>動的</span></li>
+</ul></section>
+<section class='block'>
+<h3 class='block-title'>COPY <span class='block-count'>1</span></h3>
+<div class='chip-list'>
+<span class='chip chip-copy'>ACCTDEFS <span class='chip-sub'>L31</span></span>
+</div></section>
+<section class='block'>
+<h3 class='block-title'>CRUD <span class='block-count'>5</span></h3>
+<div class='crud-grid'>
+<div class='crud-card'>
+<div class='crud-head'><span class='crud-kind'>📄 FILE</span><span class='crud-target'>ACCTMAST</span></div>
+<div class='crud-ops'>
+<span class='badge op-read'>READ</span>
+</div>
+<ul class='crud-occurrences'>
+<li><span class='occ-line'>L51</span> <span class='occ-para'>INIT-RTN</span> <span class='occ-op'>READ</span></li>
+<li><span class='occ-line'>L56</span> <span class='occ-para'>READ-LOOP</span> <span class='occ-op'>READ</span></li>
+</ul>
+</div>
+<div class='crud-card'>
+<div class='crud-head'><span class='crud-kind'>• RECORD</span><span class='crud-target'>INT-REC</span></div>
+<div class='crud-ops'>
+<span class='badge op-create'>CREATE</span>
+</div>
+<ul class='crud-occurrences'>
+<li><span class='occ-line'>L77</span> <span class='occ-para'>CALC-INTEREST</span> <span class='occ-op'>CREATE</span></li>
+</ul>
+</div>
+<div class='crud-card'>
+<div class='crud-head'><span class='crud-kind'>🗄 TABLE</span><span class='crud-target'>INT_LEDGER</span></div>
+<div class='crud-ops'>
+<span class='badge op-create'>CREATE</span>
+</div>
+<ul class='crud-occurrences'>
+<li><span class='occ-line'>L88</span> <span class='occ-para'>POST-LEDGER</span> <span class='occ-op'>CREATE</span></li>
+</ul>
+</div>
+<div class='crud-card'>
+<div class='crud-head'><span class='crud-kind'>🗄 TABLE</span><span class='crud-target'>ACCT_SUMMARY</span></div>
+<div class='crud-ops'>
+<span class='badge op-update'>UPDATE</span>
+</div>
+<ul class='crud-occurrences'>
+<li><span class='occ-line'>L93</span> <span class='occ-para'>POST-LEDGER</span> <span class='occ-op'>UPDATE</span></li>
+</ul>
+</div>
+</div></section>
+<section class='block alert'>
+<h3 class='block-title'>警告 <span class='block-count'>1</span></h3>
+<ul class='warn-list'>
+<li>line 47: 動的 CALL を検出 (WS-NEXT-PGM)。実行時バインドのためレビュー必須</li>
+</ul></section>
+</article>
+</main>
+</div>
+<footer class='site-footer'>
+Generated by <a href='https://github.com/takahiro-crypto/cobol-analyzer'>COBOL Analyzer</a>
+</footer>
+</body></html>
