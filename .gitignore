@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Analyzer outputs
+.ai_cache/
+analysis_report*.html
+analysis*.json
+report*.html
+
+# OS / Editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local env
+.env
+.env.local
